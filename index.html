@@ -421,14 +421,38 @@
     };
 
     try {
-      await fetch(SHEET_URL, {
-        method: 'POST',
-        mode: 'no-cors',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
+      // Usiamo un iframe nascosto + form per aggirare i limiti CORS di Google Apps Script
+      const iframe = document.createElement('iframe');
+      iframe.name = 'hidden_iframe';
+      iframe.style.display = 'none';
+      document.body.appendChild(iframe);
+
+      const form = document.createElement('form');
+      form.method = 'POST';
+      form.action = SHEET_URL;
+      form.target = 'hidden_iframe';
+      form.style.display = 'none';
+
+      // Aggiungiamo tutti i campi come input nascosti
+      Object.entries(payload).forEach(([key, value]) => {
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = key;
+        input.value = value;
+        form.appendChild(input);
       });
+
+      document.body.appendChild(form);
+      form.submit();
+
+      // Aspettiamo un attimo per dare tempo all'invio
+      await new Promise(resolve => setTimeout(resolve, 1500));
+
+      // Pulizia
+      document.body.removeChild(form);
+      document.body.removeChild(iframe);
     } catch (e) {
-      // con no-cors l'errore è atteso ma la richiesta viene inviata
+      console.error('Errore invio:', e);
     }
 
     document.getElementById('form-view').style.display = 'none';
